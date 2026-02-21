@@ -15,17 +15,20 @@ function getMousePos(canvas, e) {
 
 // Initialize mouse events on a canvas - call once
 export function initMouse(canvas, interactiveObjects) {
-  canvas.addEventListener('mousedown', (e) => {
-    mouse.isDown = true;
-  });
-
   canvas.addEventListener('mousemove', (e) => {
     const pos = getMousePos(canvas, e);
     mouse.x = pos.x;
     mouse.y = pos.y;
     for (let object of interactiveObjects) {
-      object.setIsHovered(mouse)
+      console.log(object)
+      if (!object.disabled){
+        object.setIsHovered(mouse)
+      }
     }
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    mouse.isDown = true;
   });
 
   canvas.addEventListener('mouseup', (e) => {
