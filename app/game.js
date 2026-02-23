@@ -1,11 +1,18 @@
 import { mouse, initMouse } from './mouse.js'
-import { TextOnCanvas, OutlinedTextOnCanvas, Clock, Number } from './objects.js'
+import { TextOnCanvas, OutlinedTextOnCanvas, Clock, NumberToMemorize } from './objects.js'
 
 
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 
 const visibleObjects = []
+
+
+const MIN_WIDTH  = 480
+const MIN_HEIGHT = 320
+const MAX_WIDTH  = 960
+const MAX_HEIGHT = 640
+
 
 initMouse(canvas, visibleObjects)
 
@@ -19,15 +26,30 @@ const GameState = {
 
 let currentGameState = GameState.MENU
 let initFlag = true
+let win=false
+
+
+function resizeCanvas() {
+  canvas.width  = Math.min(MAX_WIDTH,  Math.max(MIN_WIDTH,  window.innerWidth))
+  canvas.height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, window.innerHeight))
+  drawStuff()
+}
+
+// Set initial size
+resizeCanvas()
+
+// Listen for window resize
+window.addEventListener('resize', resizeCanvas)
 
 
 let wrongAnswers = 0
 let nextValidNum = 1
-let numNumbers = 3
+const quickGameNumNumbers = 30
+let numNumbers = quickGameNumNumbers
 
 
-let lastTime = 0
-const clock = new Clock(ctx, "clcok", 100, 0)
+let lastTime = null
+const clock = new Clock(ctx, 0, 100, 0)
 
 
 
@@ -36,6 +58,9 @@ const menuStartY = 160
 const wordOffset = 60
 
 const smallerFont = 16
+const biggerFont = 32
+
+
 
 function init(clear=true) {
   if (clear){
@@ -77,7 +102,7 @@ function initSettings() {
 function initPreamble(){
   init()
   const text = "Memorize the positions of the numbers below. Press this when you've memorized them."
-  const preamble = new OutlinedTextOnCanvas(ctx, text, midX, 0, {fontsize: smallerFont})
+  const preamble = new OutlinedTextOnCanvas(ctx, text, midX, 20, {fontsize: smallerFont})
   preamble.onClick(() => {
     currentGameState = GameState.PLAYING
     initFlag = true
@@ -90,19 +115,60 @@ function initPreamble(){
 
 function initNumbers(){
   for (let i=1; i<numNumbers + 1; i++){
-    let x = (Math.random() * 0.8 + 0.1) * canvas.width
-    let y = (Math.random() * 0.8 + 0.1) * canvas.height
-    let num = new Number(ctx, String(i), x, y, {width: 2, disabled: true})
+    let positionFound = false
+    while (!positionFound){
+      let positionOk = true
+      let xBound = (canvas.height / canvas.width) * 0.8
+      let yBound = 0.8
+      var x = (Math.random() * xBound + (1 - xBound) / 2) * canvas.width
+      var y = (Math.random() * yBound + (1 - yBound) / 2) * canvas.height
+      for (let object of visibleObjects){
+        // ctx.save()  
+        // console.log(x, y, canvas)
+        // ctx.beginPath()
+        // ctx.fillStyle = "green"
+        // ctx.fillRect(x, y, 2, 2)
+        // ctx.restore()
+        // let test = new OutlinedTextOnCanvas(ctx, "", x, y, {colour1: "green"})
+        // visibleObjects.push(test)
+
+        
+        if (object instanceof NumberToMemorize && 
+            (object.isOverlapping(x, y) ||
+            object.isOverlapping(x, y + object.rectHeight) || 
+            object.isOverlapping(x + object.rectWidth, y) || 
+            object.isOverlapping(x + object.rectWidth, y + object.rectHeight))){
+          positionOk = false 
+          break 
+        }
+      }
+      positionFound = positionOk
+    }
+
+    let num = new NumberToMemorize(ctx, String(i), x, y, {width: 2, disabled: true})
+
+    let debug = {"object.text": num.text,
+    "x": x,
+    "y": y,
+    "object.rectWidth": num.rectWidth,
+    "object.rectHeight": num.rectHeight}
+
+    console.log(debug)
+
     visibleObjects.push(num)
     num.onClick(() => {
-      // console.log(num, num.getValue())
       if (num.getValue() == nextValidNum){
         nextValidNum += 1
-        removeVisibleObject(num)
+        num.hidden = false 
+        num.disabled = true
+        // num.disabled = true
+        // num.isHovered = false
+        // removeVisibleObject(num)
       }
       else {
         num.setInvalid()
-        wrongAnswers += 1
+        currentGameState = GameState.GAME_OVER
+        initFlag = true
       }
     })
   }
@@ -118,24 +184,33 @@ function removeVisibleObject(object){
 
 function initPlaying(){
   init(false)
-  // visibleObjects.push(clock)
-  // clock.enabled = true
+  clock.disabled = false
   wrongAnswers = 0
   nextValidNum = 1
-  numNumbers = 3
+  numNumbers = quickGameNumNumbers
   for (let object of visibleObjects){
-    if (object instanceof Number){
+    if (object instanceof NumberToMemorize){
       object.disabled = false
       object.hidden = true
     }
   }
+  clock.reset()
+  visibleObjects.push(clock)
 }
 
-function initGameOver(time){
+function initGameOver(){
   init(false)
-  const text = `It took you ${time} to successfully click ${numNumbers} things and you only failed ${wrongAnswers} times! Wow!`
-  const words = new TextOnCanvas(ctx, text, midX, menuStartY, {hoverChange: false, fontsize: smallerFont})
-  const menu  = new OutlinedTextOnCanvas(ctx, "Back to menu", midX, menuStartY + wordOffset)
+  clock.disabled = true
+  for (let object of visibleObjects){
+    if (object instanceof NumberToMemorize){
+      object.disabled = true
+      object.hidden = false
+    }
+  }
+  // const text = `It took you ${time}  ${numNumbers} things and you only failed ${wrongAnswers} times! Wow!`
+  const text = win ? "Good job!!!" : "Oh no!!!"
+  const words = new OutlinedTextOnCanvas(ctx, text, midX, menuStartY, {fontsize: biggerFont, disabled: true})
+  const menu  = new OutlinedTextOnCanvas(ctx, "Back to menu", midX, menuStartY + wordOffset * 1.5, {fontsize: smallerFont})
   menu.onClick(() => {
     currentGameState = GameState.MENU
     initFlag = true
@@ -143,19 +218,21 @@ function initGameOver(time){
   visibleObjects.push(words)
   visibleObjects.push(menu)
 
-
+  win = false
 }
 
 
-function drawStuff(dt) {
+function drawStuff() {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   for (let object of visibleObjects) {
-    object.update(dt)
     object.draw(ctx)
   }
 }
 
-function updateState(){
+function updateGame(ms_dt){
+  for (let object of visibleObjects) {
+    object.update(ms_dt)
+  }
   switch(currentGameState){
     case GameState.MENU:
       if (initFlag){
@@ -180,6 +257,7 @@ function updateState(){
       }
       if (nextValidNum > numNumbers){
         initFlag = true
+        win = true
         currentGameState = GameState.GAME_OVER
       }
       break
@@ -192,21 +270,23 @@ function updateState(){
 }
 
 function loop(timestamp) {
-  // console.log(timestamp)
-
-  updateState()
+  if (lastTime === null) {
+    lastTime = timestamp
+    requestAnimationFrame(loop)
+    return
+  }
+  
   const ms_dt = (timestamp - lastTime)
   lastTime = timestamp
-  if (currentGameState == GameState.PLAYING) {
-    clock.update(ms_dt)
-  }
-  drawStuff(ms_dt)
+
+  updateGame(ms_dt)
+  drawStuff()
 
   requestAnimationFrame(loop)
 }
 
+
+
 initMenu()
 // drawMenu()
 requestAnimationFrame(loop)
-
-// console.log(interactiveRects)

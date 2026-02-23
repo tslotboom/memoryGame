@@ -20,10 +20,10 @@ export function initMouse(canvas, interactiveObjects) {
     mouse.x = pos.x;
     mouse.y = pos.y;
     for (let object of interactiveObjects) {
-      console.log(object)
-      if (!object.disabled){
+      // console.log(object)
+      // if (!object.disabled){
         object.setIsHovered(mouse)
-      }
+      // }
     }
   });
 

@@ -1,20 +1,25 @@
 const ROUND_RECT_RADII = 12
 
 
+const canvas = document.getElementById('game');
+const BACKGROUND_COLOR = window.getComputedStyle(canvas).getPropertyValue('background-color');
+const WORD_COLOUR = "white"
+
 
 export class TextOnCanvas {
-    constructor(ctx, text, x, y, {width=null, fontsize=24, font="Arial", hoverChange=true, colour="white"}={}) {        
+    constructor(ctx, text, x, y, 
+            {width=null, fontsize=24, font="Arial", colour=WORD_COLOUR, disabled=false}={}) {        
         this.x = x 
         this.y = y 
         this.text = text 
         this.fontsize = fontsize
         this.font = `${fontsize}px ${font}`
         this.isHovered = false
-        this.hoverChange = hoverChange
         this.onClickCallback = null // handle clicks
         this.mouseHeldDownOn = false
         this.padding = 10
         this.colour1 = colour
+        this.disabled = disabled
 
         this.currentInvalidDuration = 0 // ms remaining
         this.maxInvalidDuration = 750
@@ -47,7 +52,7 @@ export class TextOnCanvas {
     }
 
     handleClick() {
-        if (this.onClickCallback) {
+        if (this.onClickCallback && !this.disabled) {
         this.onClickCallback()
         }
     }
@@ -56,13 +61,33 @@ export class TextOnCanvas {
         this.currentInvalidDuration=duration
     }
 
+    isOverlapping(x, y,ctx=null){
+        // console.log("x", x)
+        // console.log("y", y)
+        // console.log("this.rectX", this.rectX)
+        // console.log("this.rectWidth", this.rectWidth)
+        // console.log("this.rectY", this.rectY)
+        // console.log("this.rectHeight", this.rectHeight)
+
+        if (ctx){
+            ctx.save()  
+            console.log(x, y, canvas)
+            ctx.beginPath()
+            ctx.fillStyle = "green"
+            ctx.fillRect(x, y, 2, 2)
+            ctx.restore()
+        }
+
+        return x > this.rectX && 
+                x < this.rectX + this.rectWidth &&
+                y > this.rectY && 
+                y < this.rectY + this.rectHeight
+    }
+
     setIsHovered(mouse){
         // is the mouse on top of this thing?
-        this.isHovered = this.hoverChange && 
-                    mouse.x > this.rectX && 
-                    mouse.x < this.rectX + this.rectWidth &&
-                    mouse.y > this.rectY && 
-                    mouse.y < this.rectY + this.rectHeight
+        this.isHovered = this.isOverlapping(mouse.x, mouse.y) && !this.disabled
+                    
     }
 // this.isHovered ? "black" : "white"
     drawWord(ctx, colour) {
@@ -91,25 +116,26 @@ export class TextOnCanvas {
             this.currentInvalidDuration = 0
         }
     }
-
 }
 
 export class OutlinedTextOnCanvas extends TextOnCanvas {
-    constructor(ctx, text, x, y, {width=null, fontsize=24, font="Arial", hoverChange=true, colour1="white", colour2="black", disabled=false}={}) {
+    constructor(ctx, text, x, y, 
+        {width=null, fontsize=24, font="Arial", colour1=WORD_COLOUR, colour2=BACKGROUND_COLOR, 
+            disabled=false}={}) {
         super(ctx, text, x, y, 
-            {fontsize: fontsize, font: font, hoverChange: hoverChange, colour1: colour1, width: width})
+            {fontsize: fontsize, font: font, colour1: colour1, width: width, 
+                disabled: disabled})
         this.colour2 = colour2
         this.hidden = false
-        this.disabled = disabled
     }
 
-    drawOutlinedWord(ctx, colour1, colour2) {
+    drawOutlinedWord(ctx, textColour, bgColour) {
         ctx.save()
 
         ctx.lineWidth = 3
 
         // background
-        ctx.fillStyle = colour2 
+        ctx.fillStyle = bgColour 
         ctx.beginPath()
         ctx.roundRect(this.rectX, this.rectY, this.rectWidth, this.rectHeight, ROUND_RECT_RADII)
         ctx.fill()
@@ -129,8 +155,8 @@ export class OutlinedTextOnCanvas extends TextOnCanvas {
         ctx.save()
 
         // outline
-        let outlineAndTextColour = !this.hidden ? colour1 : colour2
-        ctx.strokeStyle = outlineAndTextColour
+        // let outlineAndTextColour = !this.hidden ? colour1 : colour2
+        ctx.strokeStyle = textColour
 
         ctx.beginPath()
         ctx.roundRect(this.rectX, this.rectY, this.rectWidth, this.rectHeight, ROUND_RECT_RADII)
@@ -139,18 +165,19 @@ export class OutlinedTextOnCanvas extends TextOnCanvas {
 
         ctx.restore()
 
-        this.drawWord(ctx, outlineAndTextColour)
+        this.drawWord(ctx, textColour)
     }
 
     draw(ctx) {
-        const colour1 = this.isHovered ? this.colour1 : this.colour2
-        const colour2 = this.isHovered ? this.colour2 : this.colour1
+        let textColour = this.isHovered ? this.colour1 : this.colour2
+        let bgColor = this.isHovered ? this.colour2 : this.colour1
+        textColour = !this.hidden ? textColour : bgColor
 
-        this.drawOutlinedWord(ctx, colour1, colour2)
+        this.drawOutlinedWord(ctx, textColour, bgColor)
     }
 }
 
-export class Number extends OutlinedTextOnCanvas {
+export class NumberToMemorize extends OutlinedTextOnCanvas {
     constructor(ctx, text, x, y, {width=null, fontsize=24, font="Arial", disabled=false}={}) {
         super(ctx, text, x, y, {fontsize: fontsize, font: font, width: width, disabled: disabled})
     }
@@ -162,37 +189,34 @@ export class Number extends OutlinedTextOnCanvas {
         }
         return int 
     }
-    
-
-
 }
 
 
 
 export class Clock extends TextOnCanvas {
-    constructor(ctx, text, x, y, fontsize=24, font="Arial", hoverChange=false) {
-        super(ctx, text, x, y, fontsize, font, hoverChange)
-        this.enabled = false
+    constructor(ctx, text, x, y) {
+        super(ctx, text, x, y, 
+            {colour1: WORD_COLOUR, disabled: false})
         this.time_ms = 0
         this.countdown = false
-        // this.reset()
+        this.reset()
     }
 
-    reset(countdownStart=4000) {
-        this.time_ms = countdownStart
+    reset(resetTime=0) {
+        this.time_ms = resetTime
     }
 
     update(dt_ms) {
-        if (!this.enabled){
+        if (this.disabled){
             return
         }
         if (this.countdown) {
             this.time_ms -= dt_ms
         }
-        if (this.time_ms <= 1 && this.countdown) {
-            this.countdown = false
-            this.time_ms = 0
-        }
+        // if (this.time_ms <= 1 && this.countdown) {
+        //     this.countdown = false
+        //     this.time_ms = 0
+        // }
         if (!this.countdown) {
             this.time_ms += dt_ms
         }
@@ -203,7 +227,7 @@ export class Clock extends TextOnCanvas {
       const hours   = Math.floor(ms / 3600000)
       const minutes = Math.floor((ms % 3600000) / 60000)
       const seconds = Math.floor((ms % 60000) / 1000)
-      const millis  = Math.floor(ms % 1000)
+      const millis  = Math.floor((ms % 1000) / 10)
     
       // Pad with leading zeros
       const HH = String(hours).padStart(2, '0')
@@ -212,10 +236,6 @@ export class Clock extends TextOnCanvas {
       const MS = String(millis).padStart(2, '0')  // 3 digits for ms
     
       return `${HH}:${MM}:${SS}:${MS}`
-    }
-
-    draw(ctx) {
-        this.drawWord(ctx)
     }
 }
 

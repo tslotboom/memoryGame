@@ -1,6 +1,13 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+
 body {
   margin: 0;
-  background: #222;
+  background: #000000;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -8,6 +15,8 @@ body {
 }
 
 canvas {
-  border: 2px solid #fff;
-  background: #000;
+  display: block;  /* removes inline gap */
+  border: 2px solid #000000;
+  /* background: #1a1a1a; */
+  background: #1a1a1a;
 }
