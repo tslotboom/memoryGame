@@ -7,6 +7,24 @@
 </head>
 <body>
   <canvas id="game" width="640" height="480"></canvas>
+  <br>
+  <div class="controls" aria-label="Game controls">
+    <label for="quick-game-numbers" class="header">Quick game numbers</label>
+    <input id="quick-game-numbers" type="number" min="1" max="99" value="7">
+    <div class="color-control">
+      <label class="header">Background Color</label>
+      <div class="sliders">
+        <label for="bg-r">R</label>
+        <input id="bg-r" type="range" min="0" max="255" value="26">
+        <label for="bg-g">G</label>
+        <input id="bg-g" type="range" min="0" max="255" value="26">
+        <label for="bg-b">B</label>
+        <input id="bg-b" type="range" min="0" max="255" value="26">
+      </div>
+      <label for="bg-hex">Hex</label>
+      <input id="bg-hex" type="text" maxlength="7" value="#1a1a1a">
+    </div>
+  </div>
   <script src="app/game.js" type="module"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
-import { mouse, initMouse } from './mouse.js'
-import { TextOnCanvas, OutlinedTextOnCanvas, Clock, NumberToMemorize } from './objects.js'
+import { initMouse } from './mouse.js'
+import { OutlinedTextOnCanvas, Clock, NumberToMemorize } from './objects.js'
+import { initOutsideInput, canvasBackgroundColour, quickGameNumNumbers } from './htmlInputs.js'
 
 
 const canvas = document.getElementById('game')
@@ -15,6 +16,7 @@ const MAX_HEIGHT = 640
 
 
 initMouse(canvas, visibleObjects)
+initOutsideInput()
 
 const GameState = {
   MENU: 'menu',
@@ -42,10 +44,7 @@ resizeCanvas()
 window.addEventListener('resize', resizeCanvas)
 
 
-let wrongAnswers = 0
 let nextValidNum = 1
-const quickGameNumNumbers = 30
-let numNumbers = quickGameNumNumbers
 
 
 let lastTime = null
@@ -114,46 +113,38 @@ function initPreamble(){
 }
 
 function initNumbers(){
-  for (let i=1; i<numNumbers + 1; i++){
-    let positionFound = false
-    while (!positionFound){
+  const areRectsOverlapping = (rectA, rectB) => {
+    return (
+      rectA.rectX < rectB.rectX + rectB.rectWidth &&
+      rectA.rectX + rectA.rectWidth > rectB.rectX &&
+      rectA.rectY < rectB.rectY + rectB.rectHeight &&
+      rectA.rectY + rectA.rectHeight > rectB.rectY
+    )
+  }
+
+  for (let i=1; i<quickGameNumNumbers + 1; i++){
+    let num = null
+
+    while (!num){
       let positionOk = true
       let xBound = (canvas.height / canvas.width) * 0.8
       let yBound = 0.8
-      var x = (Math.random() * xBound + (1 - xBound) / 2) * canvas.width
-      var y = (Math.random() * yBound + (1 - yBound) / 2) * canvas.height
-      for (let object of visibleObjects){
-        // ctx.save()  
-        // console.log(x, y, canvas)
-        // ctx.beginPath()
-        // ctx.fillStyle = "green"
-        // ctx.fillRect(x, y, 2, 2)
-        // ctx.restore()
-        // let test = new OutlinedTextOnCanvas(ctx, "", x, y, {colour1: "green"})
-        // visibleObjects.push(test)
+      let x = (Math.random() * xBound + (1 - xBound) / 2) * canvas.width
+      let y = (Math.random() * yBound + (1 - yBound) / 2) * canvas.height
+      let candidate = new NumberToMemorize(ctx, String(i), x, y, {width: 2, disabled: true})
 
-        
+      for (let object of visibleObjects){
         if (object instanceof NumberToMemorize && 
-            (object.isOverlapping(x, y) ||
-            object.isOverlapping(x, y + object.rectHeight) || 
-            object.isOverlapping(x + object.rectWidth, y) || 
-            object.isOverlapping(x + object.rectWidth, y + object.rectHeight))){
+            areRectsOverlapping(candidate, object)){
           positionOk = false 
           break 
         }
       }
-      positionFound = positionOk
+
+      if (positionOk){
+        num = candidate
+      }
     }
-
-    let num = new NumberToMemorize(ctx, String(i), x, y, {width: 2, disabled: true})
-
-    let debug = {"object.text": num.text,
-    "x": x,
-    "y": y,
-    "object.rectWidth": num.rectWidth,
-    "object.rectHeight": num.rectHeight}
-
-    console.log(debug)
 
     visibleObjects.push(num)
     num.onClick(() => {
@@ -185,9 +176,7 @@ function removeVisibleObject(object){
 function initPlaying(){
   init(false)
   clock.disabled = false
-  wrongAnswers = 0
   nextValidNum = 1
-  numNumbers = quickGameNumNumbers
   for (let object of visibleObjects){
     if (object instanceof NumberToMemorize){
       object.disabled = false
@@ -207,7 +196,6 @@ function initGameOver(){
       object.hidden = false
     }
   }
-  // const text = `It took you ${time}  ${numNumbers} things and you only failed ${wrongAnswers} times! Wow!`
   const text = win ? "Good job!!!" : "Oh no!!!"
   const words = new OutlinedTextOnCanvas(ctx, text, midX, menuStartY, {fontsize: biggerFont, disabled: true})
   const menu  = new OutlinedTextOnCanvas(ctx, "Back to menu", midX, menuStartY + wordOffset * 1.5, {fontsize: smallerFont})
@@ -223,7 +211,12 @@ function initGameOver(){
 
 
 function drawStuff() {
+  ctx.save()
   ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = canvasBackgroundColour
+  // console.log(hexInput)
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.restore()
   for (let object of visibleObjects) {
     object.draw(ctx)
   }
@@ -232,6 +225,7 @@ function drawStuff() {
 function updateGame(ms_dt){
   for (let object of visibleObjects) {
     object.update(ms_dt)
+    object.colour2 = canvasBackgroundColour
   }
   switch(currentGameState){
     case GameState.MENU:
@@ -255,7 +249,7 @@ function updateGame(ms_dt){
       if (initFlag){
         initPlaying()
       }
-      if (nextValidNum > numNumbers){
+      if (nextValidNum > quickGameNumNumbers){
         initFlag = true
         win = true
         currentGameState = GameState.GAME_OVER

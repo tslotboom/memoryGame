@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Color Picker</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #1a1a2e;
+      font-family: sans-serif;
+    }
+
+    .picker-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    canvas#colorSquare {
+      cursor: crosshair;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    canvas#hueSlider {
+      cursor: ew-resize;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .preview-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #colorPreview {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      background: hsl(0, 100%, 50%);
+    }
+
+    #colorValue {
+      color: #fff;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="picker-wrapper">
+    <canvas id="colorSquare" width="280" height="280"></canvas>
+    <canvas id="hueSlider" width="280" height="20"></canvas>
+    <div class="preview-row">
+      <div id="colorPreview"></div>
+      <span id="colorValue">#FF0000</span>
+    </div>
+  </div>
+
+  <script>
+    const squareCanvas = document.getElementById('colorSquare');
+    const sqCtx = squareCanvas.getContext('2d');
+    const hueCanvas = document.getElementById('hueSlider');
+    const hueCtx = hueCanvas.getContext('2d');
+    const preview = document.getElementById('colorPreview');
+    const colorValue = document.getElementById('colorValue');
+
+    let currentHue = 0;
+    let pickerX = squareCanvas.width;
+    let pickerY = 0;
+
+    // --- Draw the hue slider ---
+    function drawHueSlider() {
+      const gradient = hueCtx.createLinearGradient(0, 0, hueCanvas.width, 0);
+      for (let i = 0; i <= 360; i += 30) {
+        gradient.addColorStop(i / 360, `hsl(${i}, 100%, 50%)`);
+      }
+      hueCtx.fillStyle = gradient;
+      hueCtx.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
+    }
+
+    // --- Draw the SV square for the current hue ---
+    function drawColorSquare(hue) {
+      const w = squareCanvas.width;
+      const h = squareCanvas.height;
+
+      // Fill with current hue
+      sqCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+      sqCtx.fillRect(0, 0, w, h);
+
+      // Overlay white (left → transparent)
+      const whiteGrad = sqCtx.createLinearGradient(0, 0, w, 0);
+      whiteGrad.addColorStop(0, 'rgba(255,255,255,1)');
+      whiteGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      sqCtx.fillStyle = whiteGrad;
+      sqCtx.fillRect(0, 0, w, h);
+
+      // Overlay black (top → bottom)
+      const blackGrad = sqCtx.createLinearGradient(0, 0, 0, h);
+      blackGrad.addColorStop(0, 'rgba(0,0,0,0)');
+      blackGrad.addColorStop(1, 'rgba(0,0,0,1)');
+      sqCtx.fillStyle = blackGrad;
+      sqCtx.fillRect(0, 0, w, h);
+
+      // Draw the picker circle
+      drawPickerCircle(pickerX, pickerY);
+    }
+
+    function drawPickerCircle(x, y) {
+      sqCtx.beginPath();
+      sqCtx.arc(x, y, 8, 0, Math.PI * 2);
+      sqCtx.strokeStyle = '#fff';
+      sqCtx.lineWidth = 2.5;
+      sqCtx.stroke();
+      sqCtx.beginPath();
+      sqCtx.arc(x, y, 6, 0, Math.PI * 2);
+      sqCtx.strokeStyle = 'rgba(0,0,0,0.5)';
+      sqCtx.lineWidth = 1.5;
+      sqCtx.stroke();
+    }
+
+    // --- Read pixel color from canvas ---
+    function updateColorFromSquare(x, y) {
+      const pixel = sqCtx.getImageData(x, y, 1, 1).data;
+      const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
+      preview.style.background = hex;
+      colorValue.textContent = hex;
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(v =>
+        v.toString(16).padStart(2, '0').toUpperCase()
+      ).join('');
+    }
+
+    // --- Square interaction ---
+    let draggingSquare = false;
+
+    squareCanvas.addEventListener('mousedown', e => {
+      draggingSquare = true;
+      handleSquarePick(e);
+    });
+    squareCanvas.addEventListener('mousemove', e => {
+      if (draggingSquare) handleSquarePick(e);
+    });
+    window.addEventListener('mouseup', () => { draggingSquare = false; });
+
+    function handleSquarePick(e) {
+      const rect = squareCanvas.getBoundingClientRect();
+      pickerX = Math.min(Math.max(e.clientX - rect.left, 0), squareCanvas.width);
+      pickerY = Math.min(Math.max(e.clientY - rect.top, 0), squareCanvas.height);
+      drawColorSquare(currentHue);
+      updateColorFromSquare(pickerX, pickerY);
+    }
+
+    // --- Hue slider interaction ---
+    let draggingHue = false;
+
+    hueCanvas.addEventListener('mousedown', e => {
+      draggingHue = true;
+      handleHuePick(e);
+    });
+    hueCanvas.addEventListener('mousemove', e => {
+      if (draggingHue) handleHuePick(e);
+    });
+    window.addEventListener('mouseup', () => { draggingHue = false; });
+
+    function handleHuePick(e) {
+      const rect = hueCanvas.getBoundingClientRect();
+      const x = Math.min(Math.max(e.clientX - rect.left, 0), hueCanvas.width);
+      currentHue = Math.round((x / hueCanvas.width) * 360);
+      drawColorSquare(currentHue);
+      updateColorFromSquare(pickerX, pickerY);
+    }
+
+    // --- Touch support ---
+    function toMouseEvent(e) {
+      return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+    }
+    squareCanvas.addEventListener('touchstart', e => { draggingSquare = true; handleSquarePick(toMouseEvent(e)); e.preventDefault(); }, { passive: false });
+    squareCanvas.addEventListener('touchmove', e => { if (draggingSquare) handleSquarePick(toMouseEvent(e)); e.preventDefault(); }, { passive: false });
+    hueCanvas.addEventListener('touchstart', e => { draggingHue = true; handleHuePick(toMouseEvent(e)); e.preventDefault(); }, { passive: false });
+    hueCanvas.addEventListener('touchmove', e => { if (draggingHue) handleHuePick(toMouseEvent(e)); e.preventDefault(); }, { passive: false });
+
+    // --- Init ---
+    drawHueSlider();
+    drawColorSquare(currentHue);
+    updateColorFromSquare(pickerX, pickerY);
+  </script>
+</body>
+</html>
