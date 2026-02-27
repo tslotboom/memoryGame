@@ -8,7 +8,7 @@ const WORD_COLOUR = "white"
 
 export class TextOnCanvas {
     constructor(ctx, text, x, y, 
-            {width=null, fontsize=24, font="Arial", colour=WORD_COLOUR, disabled=false}={}) {        
+            {width=null, fontsize=24, font="Arial", colour=WORD_COLOUR, disabled=false, clickAnywhere=false}={}) {        
         this.x = x 
         this.y = y 
         this.text = text 
@@ -20,7 +20,8 @@ export class TextOnCanvas {
         this.padding = 10
         this.colour1 = colour
         this.disabled = disabled
-
+        this.clickAnywhere = clickAnywhere
+        
         this.currentInvalidDuration = 0 // ms remaining
         this.maxInvalidDuration = 750
 
@@ -53,7 +54,7 @@ export class TextOnCanvas {
 
     handleClick() {
         if (this.onClickCallback && !this.disabled) {
-        this.onClickCallback()
+            this.onClickCallback()
         }
     }
 
@@ -61,7 +62,7 @@ export class TextOnCanvas {
         this.currentInvalidDuration=duration
     }
 
-    isOverlapping(x, y,ctx=null){
+    isOverlapping(x, y, ctx=null){
         // console.log("x", x)
         // console.log("y", y)
         // console.log("this.rectX", this.rectX)
@@ -86,8 +87,7 @@ export class TextOnCanvas {
 
     setIsHovered(mouse){
         // is the mouse on top of this thing?
-        this.isHovered = this.isOverlapping(mouse.x, mouse.y) && !this.disabled
-                    
+        this.isHovered = this.isOverlapping(mouse.x, mouse.y) && !this.disabled && !this.clickAnywhere
     }
 // this.isHovered ? "black" : "white"
     drawWord(ctx, colour) {
@@ -121,10 +121,10 @@ export class TextOnCanvas {
 export class OutlinedTextOnCanvas extends TextOnCanvas {
     constructor(ctx, text, x, y, 
         {width=null, fontsize=24, font="Arial", colour1=WORD_COLOUR, colour2=BACKGROUND_COLOR, 
-            disabled=false}={}) {
+            disabled=false, clickAnywhere=false}={}) {
         super(ctx, text, x, y, 
             {fontsize: fontsize, font: font, colour1: colour1, width: width, 
-                disabled: disabled})
+                disabled: disabled, clickAnywhere: clickAnywhere})
         this.colour2 = colour2
         this.hidden = false
     }
@@ -156,7 +156,8 @@ export class OutlinedTextOnCanvas extends TextOnCanvas {
 
         // outline
         // let outlineAndTextColour = !this.hidden ? colour1 : colour2
-        ctx.strokeStyle = textColour
+        // ctx.strokeStyle = textColour
+        ctx.strokeStyle = this.colour1
 
         ctx.beginPath()
         ctx.roundRect(this.rectX, this.rectY, this.rectWidth, this.rectHeight, ROUND_RECT_RADII)
@@ -194,9 +195,9 @@ export class NumberToMemorize extends OutlinedTextOnCanvas {
 
 
 export class Clock extends TextOnCanvas {
-    constructor(ctx, text, x, y) {
+    constructor(ctx, text, x, y, {fontsize=24}) {
         super(ctx, text, x, y, 
-            {colour1: WORD_COLOUR, disabled: false})
+            {colour1: WORD_COLOUR, disabled: false, fontsize: fontsize})
         this.time_ms = 0
         this.countdown = false
         this.reset()
@@ -237,10 +238,24 @@ export class Clock extends TextOnCanvas {
     
       return `${HH}:${MM}:${SS}:${MS}`
     }
+
+    getScore() {
+        return Math.round(100000 / (1000 + this.time_ms))
+    }
 }
 
 
+export class ScoreDisplay extends TextOnCanvas {
+    constructor(ctx, text, x, y, {fontsize=24}) {
+        super(ctx, text, x, y, 
+            {colour1: WORD_COLOUR, disabled: false, fontsize: fontsize})
+    }
 
+    update(score) {
+        console.log("HERE")
+        this.text = `Score: ${score}`
+    }
+}
 // export class startMenuElement extends OutlinedTextOnCanvas {
 //     constructor(ctx, text, x, y, fontsize=24, font="Arial", clickDestination) {
 //         super(ctx, text, x, y, fontsize, font)

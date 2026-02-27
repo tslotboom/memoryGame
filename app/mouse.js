@@ -46,6 +46,9 @@ export function initMouse(canvas, interactiveObjects) {
       if (object.isHovered) {
         object.handleClick()
       }
+      if (object.clickAnywhere){
+        object.handleClick()
+      }
     }
   })
 }
