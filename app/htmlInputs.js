@@ -5,6 +5,7 @@ const hexInput = document.getElementById('bg-hex');
 export let canvasBackgroundColour = hexInput.value
 const quickGameNumbersInput = document.getElementById('quick-game-numbers')
 export let quickGameNumNumbers = parseInt(quickGameNumbersInput.value)
+export const settingsDiv = document.getElementById("settings")
 
 function toHex(value) {
   return parseInt(value).toString(16).padStart(2, '0');
@@ -30,12 +31,10 @@ function updateFromHex() {
 
 function updateQuickGameNumbers() {
   quickGameNumNumbers = parseInt(quickGameNumbersInput.value)
-  console.log(quickGameNumNumbers)
-
 }
 
 
-export function initOutsideInput(){
+export function initHTMLSettings(){
   [rSlider, gSlider, bSlider].forEach(s => s.addEventListener('input', updateFromSliders));
   hexInput.addEventListener('input', updateFromHex);
   quickGameNumbersInput.addEventListener('input', updateQuickGameNumbers)

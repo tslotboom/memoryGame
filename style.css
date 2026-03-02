@@ -1,13 +1,11 @@
+/* ─── Reset ─────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-#game {
-  margin-top: 4rem;
-}
-
+/* ─── Base ───────────────────────────────────────── */
 body {
   margin: 0;
   background: #000000;
@@ -17,21 +15,48 @@ body {
   height: 100vh;
 }
 
-
-canvas {
-  display: block;  /* removes inline gap */
-  border: 2px solid #000000;
-  background: #1a1a1a;
-  display: block;
+/* ─── Layout ─────────────────────────────────────── */
+#container {
+  position: relative;
 }
 
+#game {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+#overlay {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* color: chocolate; */
+}
 
-.controls {
+#game {
+  margin-top: 4rem;
+}
+
+/* ─── Canvas ─────────────────────────────────────── */
+canvas {
+  display: block; /* removes inline gap */
+  border: 2px solid #000000;
+  background: #1a1a1a;
+}
+
+/* ─── Controls ───────────────────────────────────── */
+.settings {
   width: min(640px, 100%);
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.4rem;
   color: #f3f3f3;
+  z-index: 10;
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .sliders {
@@ -41,6 +66,7 @@ canvas {
   gap: 4px 8px;
 }
 
+/* ─── Typography ─────────────────────────────────── */
 label {
   font-family: Arial;
   color: white;
@@ -50,6 +76,11 @@ label {
   font-size: 1.5rem;
 }
 
+/* ─── Misc ───────────────────────────────────────── */
 #quick-game-numbers {
   width: 5ch;
+}
+
+.hidden {
+  display: none;
 }
